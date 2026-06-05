@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lumina — Studio</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        * { font-family: 'Inter', sans-serif; }
+        html { scroll-behavior: auto; }
+        body {
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            overflow-x: hidden;
+        }
+        :root {
+            --ink: #0a0a0a;
+            --paper: #ffffff;
+            --muted: #f5f5f5;
+            --border: #e5e5e5;
+        }
+        body {
+            background: var(--paper);
+            color: var(--ink);
+        }
+
+        /* ============ Loading Screen ============ */
+        #loader {
+            position: fixed;
+            inset: 0;
+            z-index: 99999;
+            background: #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: opacity .7s cubic-bezier(.4,0,.2,1), visibility .7s;
+            will-change: opacity;
+        }
+        #loader.hide {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+        .loader-inner {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 28px;
+            color: #fff;
+        }
+        .loader-bar {
+            width: 240px;
+            height: 2px;
+            background: rgba(255,255,255,.15);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+        .loader-progress {
+            height: 100%;
+            background: #fff;
+            width: 0%;
+            border-radius: 2px;
+            transition: width .25s linear;
+        }
+        .loader-label {
+            font-size: 12px;
+            letter-spacing: .35em;
+            text-transform: uppercase;
+            color: rgba(255,255,255,.6);
+        }
+
+        /* ============ Grid Background ============ */
+        .grid-bg {
+            position: fixed;
+            inset: 0;
+            background-image:
+                linear-gradient(to right, #f1f1f1 1px, transparent 1px),
+                linear-gradient(to bottom, #f1f1f1 1px, transparent 1px);
+            background-size: 90px 90px;
+            pointer-events: none;
+            z-index: 0;
+            opacity: .6;
+        }
+
+        /* ============ Nav ============ */
+        nav {
+            backdrop-filter: saturate(160%) blur(16px) brightness(1.1);
+            -webkit-backdrop-filter: saturate(160%) blur(16px) brightness(1.1);
+            background: rgba(255,255,255,.85);
+            border-bottom: 1px solid rgba(0,0,0,.08);
+            transform: translateY(0);
+            transition: transform .6s cubic-bezier(.2,.8,.2,1), opacity .6s cubic-bezier(.2,.8,.2,1);
+        }
+        nav.hidden-nav {
+            transform: translateY(-110%);
+            opacity: 0;
+            pointer-events: none;
+        }
+        nav::after {
+            content: "";
+            position: absolute;
+            inset: 0 -100vw;
+            background: linear-gradient(to bottom, rgba(0,0,0,.04), transparent);
+            pointer-events: none;
+        }
+        .nav-link {
+            position: relative;
+            padding: .5rem 0;
+            transition: color .3s;
+        }
+        .nav-link::after {
+            content: "";
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 0%;
+            height: 1.5px;
+            background: #000;
+            transition: width .45s cubic-bezier(.77,0,.18,1);
+        }
+        .nav-link:hover::after {
+            width: 100%;
+        }
+
+        /* ============ Cards ============ */
+        .feature-card {
+            border: 1px solid var(--border);
+            background: rgba(255,255,255,.75);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            transition: transform .5s cubic-bezier(.2,.8,.2,1), border-color .5s cubic-bezier(.2,.8,.2,1), box-shadow .5s cubic-bezier(.2,.8,.2,1);
+            will-change: transform;
+        }
+        .feature-card:hover {
+            transform: translateY(-10px);
+            border-color: #000;
+            box-shadow: 0 24px 60px rgba(0,0,0,.08);
+        }
+
+        /* ============ Buttons ============ */
+        .btn-black {
+            background: #000;
+            color: #fff;
+            transition: transform .35s cubic-bezier(.34,1.56,.64,1), box-shadow .35s ease;
+        }
+        .btn-black:hover {
+            transform: scale(1.06);
+            box-shadow: 0 18px 45px rgba(0,0,0,.18);
+        }
+        .btn-black:active {
+            transform: scale(0.96);
+        }
+        .btn-outline {
+            border: 1px solid #000;
+            transition: transform .35s cubic-bezier(.34,1.56,.64,1), background .35s ease;
+        }
+        .btn-outline:hover {
+            transform: scale(1.05);
+            background: #000;
+            color: #fff;
+        }
+
+        /* ============ Reveal ============ */
+        section.scroll-section,
+        .reveal {
+            opacity: 0;
+            transform: translateY(70px);
+            transition: opacity 1.1s cubic-bezier(.2,.8,.2,1), transform 1.1s cubic-bezier(.2,.8,.2,1);
+        }
+        section.scroll-section.visible,
+        .reveal.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* ============ Hero ============ */
+        .hero-title {
+            line-height: .95;
+            letter-spacing: -.05em;
+        }
+
+        /* ============ Form ============ */
+        .form-input {
+            border: 1px solid var(--border);
+            background: rgba(255,255,255,.8);
+            transition: border-color .3s, box-shadow .3s;
+        }
+        .form-input:focus {
+            outline: none;
+            border-color: #000;
+            box-shadow: 0 0 0 4px rgba(0,0,0,.06);
+        }
+
+        /* ============ Responsive ============ */
+        @media (max-width: 640px) {
+            .hero-title { font-size: 3.2rem; letter-spacing: -.035em; line-height: 1; }
+            .grid-bg { background-size: 60px 60px; }
+        }
+    </style>
+</head>
+<body class="min-h-screen" aria-label="Lumina studio website">
+
+    <!-- ===== Loading Screen ===== -->
+    <div id="loader" role="status" aria-live="polite" aria-label="Loading">
+        <div class="loader-inner">
+            <div style="font-weight:700;font-size:14px;letter-spacing:.3em;text-transform:uppercase;">Lumina</div>
+            <div class="loader-bar">
+                <div class="loader-progress" id="loader-progress"></div>
+            </div>
+            <div class="loader-label">Loading experience</div>
+        </div>
+    </div>
+
+    <!-- ===== Grid ===== -->
+    <div class="grid-bg" aria-hidden="true"></div>
+
+    <!-- ===== Navbar ===== -->
+    <nav id="navbar" role="navigation" aria-label="Main navigation">
+        <div class="mx-auto max-w-[1800px] px-6 md:px-10 py-5 md:py-6 flex items-center justify-between">
+            <a href="#hero" class="text-base font-bold tracking-tight" aria-label="Lumina home">Lumina</a>
+            <div class="hidden md:flex items-center gap-10 text-[15px] font-medium text-neutral-600">
+                <a href="#work" class="nav-link">Work</a>
+                <a href="#services" class="nav-link">Services</a>
+                <a href="#studio" class="nav-link">Studio</a>
+                <a href="#contact" class="nav-link">Contact</a>
+            </div>
+            <a href="#contact" class="btn-black px-6 py-3 rounded-full text-[13px] font-bold">Start a project</a>
+        </div>
+    </nav>
+
+    <!-- ===== Main ===== -->
+    <main>
+
+        <!-- Hero -->
+        <section id="hero" class="pt-40 md:pt-56 pb-24 md:pb-40">
+            <div class="mx-auto max-w-[1800px] px-6 md:px-10">
+                <div class="grid lg:grid-cols-12 gap-10 lg:gap-20">
+                    <div class="lg:col-span-7">
+                        <h1 class="hero-title text-5xl md:text-7xl lg:text-[7.5rem] font-black">
+                            We design<br>
+                            digital products
+                        </h1>
+                    </div>
+                    <div class="lg:col-span-4 lg:col-start-9 lg:pb-4">
+                        <p class="text-neutral-600 leading-[1.7] text-[17px]">
+                            A minimal design and development studio building thoughtful products for brands and startups — with care for craft, motion, and long-term systems.
+                        </p>
+                        <div class="mt-8 flex flex-wrap gap-4">
+                            <a href="#work" class="btn-black inline-flex px-8 py-4 rounded-full text-[13px] font-bold">View work</a>
+                            <a href="#contact" class="btn-outline inline-flex px-8 py-4 rounded-full text-[13px] font-bold">Get in touch</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Work -->
+        <section id="work" class="py-20 md:py-32 reveal">
+            <div class="mx-auto max-w-[1800px] px-6 md:px-10">
+                <div class="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-14 md:mb-20">
+                    <h2 class="text-3xl md:text-5xl font-black tracking-tight">Selected work</h2>
+                    <span class="text-sm text-neutral-500 md:pb-2">2019 — present</span>
+                </div>
+                <div class="grid md:grid-cols-2 gap-8 md:gap-10">
+                    <a href="#" class="feature-card rounded-[2rem] p-7 md:p-10 group block">
+                        <div class="aspect-[4/3] rounded-2xl bg-neutral-100 mb-8 overflow-hidden relative">
+                            <div class="absolute inset-0 bg-[radial-gradient(circle_at_25%_30%,rgba(0,0,0,.07),transparent_55%)]"></div>
+                            <div class="absolute inset-0 bg-gradient-to-tr from-neutral-200/40 to-transparent"></div>
+                            <div class="absolute -inset-24 bg-gradient-to-br from-neutral-900/[0.04] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
+                        </div>
+                        <div class="flex items-start justify-between gap-4">
+                            <div>
+                                <h3 class="text-2xl font-bold mb-2 group-hover:translate-x-2 transition-transform duration-500">Sequence</h3>
+                                <p class="text-neutral-600 text-[15px]">SaaS platform for product teams</p>
+                            </div>
+                            <span class="text-xs font-semibold text-neutral-500 border border-neutral-200 px-3 py-1.5 rounded-full shrink-0">2025</span>
+                        </div>
+                    </a>
+                    <a href="#" class="feature-card rounded-[2rem] p-7 md:p-10 group block md:mt-20">
+                        <div class="aspect-[4/3] rounded-2xl bg-neutral-100 mb-8 overflow-hidden relative">
+                            <div class="absolute inset-0 bg-[radial-gradient(circle_at_65%_35%,rgba(0,0,0,.07),transparent_55%)]"></div>
+                            <div class="absolute inset-0 bg-gradient-to-bl from-neutral-200/40 to-transparent"></div>
+                            <div class="absolute -inset-24 bg-gradient-to-br from-neutral-900/[0.04] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
+                        </div>
+                        <div class="flex items-start justify-between gap-4">
+                            <div>
+                                <h3 class="text-2xl font-bold mb-2 group-hover:translate-x-2 transition-transform duration-500">Alma</h3>
+                                <p class="text-neutral-600 text-[15px]">Financial wellness application</p>
+                            </div>
+                            <span class="text-xs font-semibold text-neutral-500 border border-neutral-200 px-3 py-1.5 rounded-full shrink-0">2025</span>
+                        </div>
+                    </a>
+                </div>
+            </div>
+        </section>
+
+        <!-- Services -->
+        <section id="services" class="py-20 md:py-32 reveal">
+            <div class="mx-auto max-w-[1800px] px-6 md:px-10">
+                <h2 class="text-3xl md:text-5xl font-black tracking-tight mb-14 md:mb-20">Services</h2>
+                <div class="grid md:grid-cols-3 gap-8 md:gap-10">
+                    <div class="feature-card rounded-[2rem] p-9 md:p-10">
+                        <div class="text-xs font-bold text-neutral-400 tracking-[.3em] mb-8">01</div>
+                        <h3 class="text-xl font-bold mb-4">Product Design</h3>
+                        <p class="text-neutral-600 leading-[1.7] text-[15px]">End-to-end interfaces, design systems, and prototyping focused on clarity and craft.</p>
+                    </div>
+                    <div class="feature-card rounded-[2rem] p-9 md:p-10">
+                        <div class="text-xs font-bold text-neutral-400 tracking-[.3em] mb-8">02</div>
+                        <h3 class="text-xl font-bold mb-4">Development</h3>
+                        <p class="text-neutral-600 leading-[1.7] text-[15px]">Robust web apps with React, Next.js, and Node — shipped with real performance budgets.</p>
+                    </div>
+                    <div class="feature-card rounded-[2rem] p-9 md:p-10">
+                        <div class="text-xs font-bold text-neutral-400 tracking-[.3em] mb-8">03</div>
+                        <h3 class="text-xl font-bold mb-4">Motion</h3>
+                        <p class="text-neutral-600 leading-[1.7] text-[15px]">Subtle, purposeful animation to connect states in a coherent, lightweight experience.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Studio -->
+        <section id="studio" class="py-20 md:py-32 reveal">
+            <div class="mx-auto max-w-[1800px] px-6 md:px-10">
+                <div class="grid lg:grid-cols-12 gap-12 lg:gap-20 items-center">
+                    <div class="lg:col-span-5">
+                        <h2 class="text-3xl md:text-5xl font-black tracking-tight leading-[1.05] mb-8">
+                            A small studio with high craft standards
+                        </h2>
+                        <p class="text-neutral-600 leading-[1.7] text-[15px] mb-10">
+                            We work quietly with founders and product leads to raise the visual and interaction quality of their products. Small engagements, tight feedback loops.
+                        </p>
+                        <a href="#contact" class="btn-black inline-flex px-8 py-4 rounded-full text-[13px] font-bold">Say hello</a>
+                    </div>
+                    <div class="lg:col-span-7">
+                        <div class="feature-card rounded-[2rem] p-8 md:p-12">
+                            <div class="grid sm:grid-cols-2 gap-8 md:gap-12">
+                                <div>
+                                    <div class="text-xs font-bold text-neutral-400 tracking-[.3em] mb-3">Based in</div>
+                                    <div class="font-bold text-lg">Stockholm / Remote</div>
+                                </div>
+                                <div>
+                                    <div class="text-xs font-bold text-neutral-400 tracking-[.3em] mb-3">Currently</div>
+                                    <div class="font-bold text-lg">Available for Q3</div>
+                                </div>
+                                <div>
+                                    <div class="text-xs font-bold text-neutral-400 tracking-[.3em] mb-3">Since</div>
+                                    <div class="font-bold text-lg">2019</div>
+                                </div>
+                                <div>
+                                    <div class="text-xs font-bold text-neutral-400 tracking-[.3em] mb-3">Clientele</div>
+                                    <div class="font-bold text-lg">Startups &amp; brands</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Contact -->
+        <section id="contact" class="py-20 md:py-32 reveal">
+            <div class="mx-auto max-w-[1800px] px-6 md:px-10">
+                <div class="feature-card rounded-[2rem] p-8 md:p-14 lg:p-20">
+                    <div class="grid lg:grid-cols-12 gap-10 lg:gap-16">
+                        <div class="lg:col-span-5">
+                            <h2 class="text-3xl md:text-5xl font-black tracking-tight leading-[1.05] mb-5">
+                                Let's build something together
+                            </h2>
+                            <p class="text-neutral-600 leading-[1.7] text-[15px]">Tell us about your timeline and what you're working on.</p>
+                        </div>
+                        <form class="lg:col-span-6 lg:col-start-7 flex flex-col gap-5" onsubmit="event.preventDefault();" aria-label="Contact form">
+                            <label class="sr-only" for="name">Name</label>
+                            <input id="name" type="text" placeholder="Name" class="form-input w-full rounded-2xl px-6 py-4 text-[15px]" autocomplete="name" required>
+                            <label class="sr-only" for="email">Email</label>
+                            <input id="email" type="email" placeholder="Email" class="form-input w-full rounded-2xl px-6 py-4 text-[15px]" autocomplete="email" required>
+                            <label class="sr-only" for="message">Message</label>
+                            <textarea id="message" rows="5" placeholder="Message" class="form-input w-full rounded-2xl px-6 py-4 text-[15px]"></textarea>
+                            <div>
+                                <button type="submit" class="btn-black px-9 py-4 rounded-full text-[13px] font-bold">Send message</button>
+                                <p class="text-xs text-neutral-500 mt-3">We'll reply within 24 hours.</p>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="py-10 md:py-12 border-t border-neutral-200">
+            <div class="mx-auto max-w-[1800px] px-6 md:px-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div class="text-base font-bold">Lumina</div>
+                <div class="text-sm text-neutral-500">Lumina Studio</div>
+                <a href="mailto:hello@lumina.studio" class="text-sm text-neutral-600 hover:text-black transition-colors">hello@lumina.studio</a>
+            </div>
+        </footer>
+
+    </main>
+
+    <!-- ===== Scripts ===== -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+    <script src="https://unpkg.com/lenis@1.1.9/dist/lenis.min.js"></script>
+    <script>
+    (function() {
+        'use strict';
+
+        /* ---- Loader ---- */
+        const loader = document.getElementById('loader');
+        const progress = document.getElementById('loader-progress');
+        let v = 0;
+        const tick = setInterval(() => {
+            v += Math.random() * 20 + 5;
+            if (v > 95) v = 95;
+            progress.style.width = v + '%';
+        }, 200);
+
+        window.addEventListener('load', () => {
+            clearInterval(tick);
+            progress.style.width = '100%';
+            setTimeout(() => loader.classList.add('hide'), 420);
+            loader.addEventListener('transitionend', () => loader.remove(), { once: true });
+        });
+
+        /* ---- GSAP / Lenis ---- */
+        gsap.registerPlugin(ScrollTrigger);
+
+        const lenis = new Lenis({
+            duration: 1.2,
+            easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+            lerp: 0.08,
+            smoothWheel: true,
+            touchMultiplier: 1.4,
+        });
+
+        function raf(time) {
+            lenis.raf(time);
+            requestAnimationFrame(raf);
+        }
+        requestAnimationFrame(raf);
+
+        lenis.on('scroll', ScrollTrigger.update);
+        gsap.ticker.add((time) => lenis.raf(time * 1000));
+        gsap.ticker.lagSmoothing(0);
+
+        /* ---- Navbar hide/show ---- */
+        const navbar = document.getElementById('navbar');
+        let lastScroll = 0;
+
+        lenis.on('scroll', ({ scroll }) => {
+            if (scroll > 90 && scroll > lastScroll + 4) {
+                navbar.classList.add('hidden-nav');
+            } else if (scroll < lastScroll - 2) {
+                navbar.classList.remove('hidden-nav');
+            }
+            if (scroll < 40) navbar.classList.remove('hidden-nav');
+            lastScroll = scroll;
+        });
+
+        /* ---- Smooth anchor links ---- */
+        document.querySelectorAll('a[href^="#"]').forEach((anchor) => {
+            anchor.addEventListener('click', (e) => {
+                e.preventDefault();
+                const id = anchor.getAttribute('href');
+                const target = document.querySelector(id);
+                if (target) lenis.scrollTo(target, { offset: -80, duration: 1.3 });
+            });
+        });
+
+        /* ---- Intersection-based reveal ---- */
+        const reveal = (selector) => {
+            const io = new IntersectionObserver((entries) => {
+                entries.forEach((entry) => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('visible');
+                        io.unobserve(entry.target);
+                    }
+                });
+            }, { threshold: 0.12 });
+
+            document.querySelectorAll(selector).forEach((el) => io.observe(el));
+        };
+
+        reveal('.feature-card');
+        reveal('section.scroll-section');
+        reveal('.reveal');
+
+        /* ---- 3D tilt on feature cards ---- */
+        const tilt = (el, factor = 5) => {
+            el.addEventListener('mousemove', (e) => {
+                const rect = el.getBoundingClientRect();
+                const x = (e.clientX - rect.left) / rect.width - 0.5;
+                const y = (e.clientY - rect.top) / rect.height - 0.5;
+                gsap.to(el, {
+                    rotateX: y * -factor,
+                    rotateY: x * factor,
+                    duration: .45,
+                    ease: 'power2.out',
+                    transformPerspective: 900,
+                    transformOrigin: 'center center',
+                });
+            });
+            el.addEventListener('mouseleave', () => {
+                gsap.to(el, {
+                    rotateX: 0,
+                    rotateY: 0,
+                    duration: .75,
+                    ease: 'elastic.out(1, .6)',
+                });
+            });
+        };
+        document.querySelectorAll('.feature-card').forEach((card) => tilt(card, 4));
+
+        /* ---- Fallback: if loader fails, show content after 4s ---- */
+        setTimeout(() => {
+            if (!loader.classList.contains('hide')) {
+                loader.classList.add('hide');
+            }
+        }, 4000);
+
+    })();
+    </script>
+</body>
+</html>
